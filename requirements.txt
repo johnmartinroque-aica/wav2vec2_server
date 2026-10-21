@@ -1,0 +1,14 @@
+# Web server
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
+# Model / inference
+torch>=2.2
+torchaudio>=2.2
+transformers>=4.40
+
+# Audio processing
+soundfile>=0.12
+librosa>=0.10
+numpy>=1.26

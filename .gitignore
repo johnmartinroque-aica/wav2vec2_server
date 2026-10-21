@@ -1,0 +1,51 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Model weights and caches (download at runtime instead of committing)
+models/
+checkpoints/
+.cache/
+huggingface/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# Audio files (uploads, test samples)
+uploads/
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+# Logs
+logs/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

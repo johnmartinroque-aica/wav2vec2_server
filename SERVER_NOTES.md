@@ -31,6 +31,9 @@ Optional environment variables:
 | `ALLOWED_ORIGINS` | Comma-separated sites allowed to call the API, e.g. `http://localhost:3000,https://mysite.com` | `*` (any site)      |
 | `API_KEY`         | If set, requests must send the header `X-API-Key: <value>`                                     | not set             |
 | `HOST`, `PORT`    | Where to listen                                                                                | `127.0.0.1`, `8000` |
+| `OLLAMA_URL`      | Ollama server used for the `feedback` text                                                     | `http://127.0.0.1:11434` |
+| `OLLAMA_MODEL`    | Ollama model used for the `feedback` text                                                      | `llama3.2:1b`       |
+| `OLLAMA_TIMEOUT`  | Seconds to wait for Ollama before giving up                                                    | `30`                |
 
 ## API
 
@@ -73,9 +76,17 @@ Response (shortened):
       "message": "you said \"aw\" ... instead of \"ah\" ...",
       "tip": null
     }
-  ]
+  ],
+  "feedback": "You're doing great! 😊 In \"Rock\", pull your tongue back for the \"r\" sound..."
 }
 ```
+
+`feedback` is friendly coaching for a young Japanese child, written by a
+local Ollama model (`feedback.py`). It covers at most the 2 most important
+issues and reuses the tips from `phonemes.py`, so the model only rewords
+them. Start Ollama (`ollama serve`) before the server; if Ollama is not
+running, `feedback` is `null` and everything else still works. Expect it to
+add a few seconds per request on the CPU.
 
 If the recording is too short or too quiet:
 `{"ok": false, "error": "too_short_or_quiet", "message": "..."}`

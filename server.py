@@ -13,6 +13,8 @@ Environment variables (all optional):
                      e.g. "http://localhost:3000,https://mysite.com" (default: *)
     API_KEY          if set, requests must send header  X-API-Key: <value>
     HOST, PORT       where to listen (default 127.0.0.1:8000)
+    OLLAMA_URL       Ollama address for the "feedback" text (default http://127.0.0.1:11434)
+    OLLAMA_MODEL     model used for feedback (default llama3.2:1b)
 """
 import io
 import os
@@ -26,6 +28,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from feedback import coach
 from phonemes import explain, respell
 from pronounce import SAMPLE_RATE, analyze, load_model
 from scoring import grade
@@ -105,6 +108,7 @@ def analyze_endpoint(audio: UploadFile = File(...), text: str = Form(...),
         "heard": {"phonemes": r["spoken"], "soundsLike": respell(r["spoken"])},
         "words": words,
         "issues": issues,
+        "feedback": coach(text, round(r["score"]), issues),
     }
 
 

@@ -123,6 +123,11 @@ def respell(phones):
     return "-".join(lookup(p)[0] for p in phones)
 
 
+def ipa(phones):
+    """['ð', 'ə'] -> '/ðə/'"""
+    return f"/{''.join(phones)}/"
+
+
 def describe(phone):
     """'ð' -> '"th" (as in this (buzzing))'"""
     label, example = lookup(phone)

@@ -12,7 +12,7 @@ from difflib import SequenceMatcher
 import gradio as gr
 import numpy as np
 
-from phonemes import explain, respell
+from phonemes import explain, ipa, respell
 from pronounce import PRACTICE_SENTENCES, SAMPLE_RATE, analyze
 from scoring import GRADES, grade
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
@@ -101,8 +101,8 @@ def render(model_id, r, secs):
         None, r["expected"], r["spoken"], autojunk=False).get_matching_blocks())
     math = (f"<p class='pc-math'>{matched} sounds matched · {n_exp} expected · {n_heard} heard<br>"
             f"Score = 2 × {matched} ÷ ({n_exp} + {n_heard}) = {r['score']:.0f}</p>")
-    expected = "  ".join(respell(ph) for _, ph, _ in r["words"])
-    heard = "  ".join(respell(g) if g else "(none)" for g in r["heard_words"])
+    expected_ipa = "  ".join(ipa(ph) for _, ph, _ in r["words"])
+    heard_ipa = "  ".join(ipa(g) if g else "(none)" for g in r["heard_words"])
     return f"""
 <div class="pc-result">
   {header(model_id)}
@@ -112,8 +112,8 @@ def render(model_id, r, secs):
   {math}
   <div class="pc-words">{words}</div>
   <table class="pc-phones">
-    <tr><th>Should sound like</th><td>{html.escape(expected)}</td></tr>
-    <tr><th>Heard</th><td>{html.escape(heard)}</td></tr>
+    <tr><th>Should sound like (IPA)</th><td>{html.escape(expected_ipa)}</td></tr>
+    <tr><th>Heard (IPA)</th><td>{html.escape(heard_ipa)}</td></tr>
   </table>
   {details}
 </div>"""
@@ -169,8 +169,7 @@ CSS = """
 .pc-phones { margin:0 auto 12px; font-size:14px; border:none !important; }
 .pc-phones th, .pc-phones td { border:none !important; padding:3px 6px; }
 .pc-phones th { text-align:right; opacity:.7; font-weight:400; }
-.pc-phones td { text-align:left; font-weight:600; word-spacing:6px; }
-.pc-result ul { text-align:left; display:inline-block; }
+.pc-phones td { text-align:left; font-weight:600; word-spacing:6px; }.pc-result ul { text-align:left; display:inline-block; }
 .pc-cmp { margin:0 auto; }
 .pc-cmp td, .pc-cmp th { padding:4px 12px; text-align:center; }
 .pc-msg { text-align:center; padding:24px; opacity:.8; }

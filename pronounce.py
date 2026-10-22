@@ -54,7 +54,7 @@ from phonemizer import phonemize  # noqa: E402
 from phonemizer.separator import Separator  # noqa: E402
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor  # noqa: E402
 
-from phonemes import explain, respell  # noqa: E402
+from phonemes import explain, ipa, respell  # noqa: E402
 from scoring import grade  # noqa: E402
 
 # Marks that differ between the model output and espeak but don't change
@@ -74,6 +74,14 @@ _SAME = {
 def normalize(phone):
     phone = phone.translate(_STRIP)
     return _SAME.get(phone, phone)
+
+
+# Words whose accepted pronunciations replace espeak's (in normalized phones).
+# The first is the preferred one, shown when none fits better. espeak reads a
+# lone "a" as the letter name "ay", but in a sentence it's a weak /ə/.
+_PRONUNCIATIONS = {
+    "a": [["ə"], ["eɪ"]],
+}
 
 
 def load_model():
@@ -204,6 +212,24 @@ def expected_phones_per_word(text):
     return result
 
 
+def choose_pronunciations(words, spoken):
+    """For words with several accepted pronunciations, keep the one closest to what was heard."""
+    words = list(words)
+
+    def ratio(trial):
+        expected = [p for _, phones in trial for p in phones]
+        return SequenceMatcher(None, expected, spoken, autojunk=False).ratio()
+
+    for wi, (word, phones) in enumerate(words):
+        options = _PRONUNCIATIONS.get(word.lower(), [phones])
+        if len(options) > 1:
+            words[wi] = (word, max(options, key=lambda ph: ratio(
+                words[:wi] + [(word, ph)] + words[wi + 1:])))
+        else:
+            words[wi] = (word, options[0])
+    return words
+
+
 def analyze(proc, model, audio, text):
     """Score audio against text. Returns a dict, or None if the audio is unusable."""
     audio = trim_silence(audio)
@@ -213,7 +239,7 @@ def analyze(proc, model, audio, text):
     emission = emissions(proc, model, audio)
     heard = recognize_phones(emission, proc.tokenizer)
     spoken = [p for p, _ in heard]
-    words = expected_phones_per_word(text)
+    words = choose_pronunciations(expected_phones_per_word(text), spoken)
 
     expected, owner = [], []  # owner[i] = index of the word that phone i belongs to
     for wi, (_, phones) in enumerate(words):
@@ -298,8 +324,8 @@ def assess(proc, model, audio, text):
 
     score = r["score"]
     g = grade(score)
-    print(f"\n  Expected: {respell(r['expected'])}")
-    print(f"  Heard:    {respell(r['spoken'])}")
+    print(f"\n  Expected: {respell(r['expected'])}   {ipa(r['expected'])}")
+    print(f"  Heard:    {respell(r['spoken'])}   {ipa(r['spoken'])}")
     print(f"\n  Overall score: {score:.0f}/100  Grade {g.letter} - {g.verdict}\n")
 
     print("  Per word:")

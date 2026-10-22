@@ -65,30 +65,30 @@ def to_mono_16k(audio):
     return data.astype(np.float32)
 
 
-def heard_per_word(r):
-    """Split the spoken phones into words by aligning them to the expected phones."""
-    owner = [wi for wi, (_, phones, _) in enumerate(r["words"]) for _ in phones]
-    groups = [[] for _ in r["words"]]
-    sm = SequenceMatcher(None, r["expected"], r["spoken"], autojunk=False)
-    for op, i1, i2, j1, j2 in sm.get_opcodes():
-        if not owner or j1 == j2:
-            continue
-        # Inserted sounds (e.g. the extra vowel in "milk" -> "miruku") belong to
-        # the word they follow, not the next one.
-        i = i1 - 1 if op == "insert" and i1 > 0 else i1
-        groups[owner[min(i, len(owner) - 1)]].extend(r["spoken"][j1:j2])
-    return groups
+def short(model_id):
+    """'facebook/wav2vec2-lv-60-espeak-cv-ft' -> 'lv-60'"""
+    return "-".join(model_id.split("/")[-1].split("-")[1:3])
+
+
+def word_timing(r):
+    """Per-word forced-alignment info, or Nones if alignment failed."""
+    return r["timing"] or [None] * len(r["words"])
 
 
 def render(model_id, r, secs):
     if r is None:
         return f"<div class='pc-result'>{header(model_id)}<p class='pc-msg'>Recording too short or too quiet.</p></div>"
     g = grade(r["score"])
-    words = "".join(
-        f'<span class="pc-word" style="border-color:{grade(ws).color};color:{grade(ws).color}">'
-        f'{html.escape(w)}<em>{html.escape(respell(ph))}</em><small>{ws:.0f}%</small></span>'
-        for w, ph, ws in r["words"]
-    )
+    chips = []
+    for (w, ph, ws), t in zip(r["words"], word_timing(r)):
+        tip = "No timing (alignment failed)"
+        if t and t["start"] is not None:
+            tip = f"Said at {t['start']:.2f}-{t['end']:.2f}s"
+        chips.append(
+            f'<span class="pc-word" title="{html.escape(tip)}" '
+            f'style="border-color:{grade(ws).color};color:{grade(ws).color}">'
+            f'{html.escape(w)}<em>{html.escape(respell(ph))}</em><small>{ws:.0f}%</small></span>')
+    words = "".join(chips)
     rows = [
         f"<li>In <b>{html.escape(word)}</b>: you {html.escape(msg)}</li>"
         for op, word, exp, got in r["issues"]
@@ -102,7 +102,7 @@ def render(model_id, r, secs):
     math = (f"<p class='pc-math'>{matched} sounds matched · {n_exp} expected · {n_heard} heard<br>"
             f"Score = 2 × {matched} ÷ ({n_exp} + {n_heard}) = {r['score']:.0f}</p>")
     expected = "  ".join(respell(ph) for _, ph, _ in r["words"])
-    heard = "  ".join(respell(g) if g else "(none)" for g in heard_per_word(r))
+    heard = "  ".join(respell(g) if g else "(none)" for g in r["heard_words"])
     return f"""
 <div class="pc-result">
   {header(model_id)}
@@ -124,8 +124,8 @@ def summary(results):
     (a_id, a, _), (b_id, b, _) = results
     if a is None or b is None:
         return ""
-    head = f"<tr><th>Word</th><th>{html.escape(a_id.split('/')[-1])}</th>" \
-           f"<th>{html.escape(b_id.split('/')[-1])}</th><th>Diff</th></tr>"
+    na, nb = html.escape(short(a_id)), html.escape(short(b_id))
+    head = f"<tr><th>Word</th><th>{na}</th><th>{nb}</th><th>Diff</th></tr>"
     body = "".join(
         f"<tr><td>{html.escape(w)}</td><td>{sa:.0f}%</td><td>{sb:.0f}%</td><td>{sb - sa:+.0f}</td></tr>"
         for (w, _, sa), (_, _, sb) in zip(a["words"], b["words"])
@@ -225,6 +225,9 @@ with gr.Blocks(title="Model Comparison") as demo:
             )
             + "\nWord colors use the same bands: green / light green = A / B, "
             "orange = C, red = D.\n\n"
+            "**7. Timing.** The app also finds *when* each word was said in the recording "
+            "(hover over a word to see it). This is used to split the *Heard* line into words, "
+            "so an extra vowel stays with the word it belongs to (*milk* → *mi-ru-ku*).\n\n"
             "Each model's result also shows its own numbers, e.g. "
             "*3 sounds matched · 5 expected · 5 heard*, so you can check how the score came about."
         )
@@ -242,4 +245,4 @@ with gr.Blocks(title="Model Comparison") as demo:
     audio.stop_recording(check, [audio, sentence], [out_a, out_b, out_cmp])
 
 if __name__ == "__main__":
-    demo.launch(inbrowser=True, css=CSS)
+    demo.launch(inbrowser=True, css=CSS, share=True)

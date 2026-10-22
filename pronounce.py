@@ -61,9 +61,19 @@ from scoring import grade  # noqa: E402
 # whether a sound was pronounced correctly.
 _STRIP = str.maketrans("", "", "ˈˌːˑ‿")
 
+# Sounds that differ mainly in stress, which the model doesn't tell apart
+# reliably. Each maps to the one sound the whole group counts as.
+_SAME = {
+    "ʌ": "ə", "ɐ": "ə",  # cup / sofa / about -> "uh"
+    "ɚ": "ɜ", "ɝ": "ɜ",  # butter / bird -> "er"
+    "ᵻ": "ɪ", "ɨ": "ɪ",  # roses (weak) -> "i"
+    "ɾ": "t",            # flapped t in "water"
+}
+
 
 def normalize(phone):
-    return phone.translate(_STRIP)
+    phone = phone.translate(_STRIP)
+    return _SAME.get(phone, phone)
 
 
 def load_model():

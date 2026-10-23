@@ -131,15 +131,6 @@ python pronounce.py --list-devices                   # list microphones
 python pronounce.py --device 2 --save                # choose a mic and save each take
 ```
 
-## Limitations
-
-This is a prototype and hasn't been validated yet:
-
-- **Recognition:** the model was trained mostly on adult speech. Its accuracy on children and on Japanese-accented English hasn't been measured. Decoding is greedy and doesn't use confidence scores.
-- **Scoring:** the score is a sequence-similarity ratio in which every sound counts the same. The grade cutoffs were set by hand and haven't been calibrated against teacher ratings.
-- **Feedback:** the advice can only be as accurate as the recognition. If the model mishears a sound, the learner may get advice about a mistake they didn't make.
-
-Planned next step: a small set of learner recordings annotated by a teacher, used to measure phoneme error rate, check how well scores agree with teacher ratings, and check whether the feedback is correct.
 
 ## Hosting note
 
